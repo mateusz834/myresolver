@@ -14,6 +14,6 @@ func main() {
 }
 
 func run() error {
-	srv := NewServer("rand.api.who-resolved.example.com.")
-	return srv.Run(netip.MustParseAddrPort("[::]:5333"), ":8080")
+	srv := NewServer("rand.api.get.my-resolver.834834.xyz")
+	return srv.Run(netip.MustParseAddrPort("95.216.184.1:53"), ":80")
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"net/netip"
@@ -13,16 +14,24 @@ import (
 	"github.com/mateusz834/myresolver"
 )
 
+var (
+	//go:embed static/index.html
+	indexHTML []byte
+
+	//go:embed static/main.js
+	mainJS []byte
+)
+
 type server struct {
 	m               sync.Mutex
-	domain          string
 	queriedMain     map[string]netip.Addr
 	queriedFallback map[string]netip.Addr
+	domain          string
 }
 
 func NewServer(handleDomain string) server {
 	m := make(map[string]netip.Addr)
-	return server{domain: "." + handleDomain, queriedMain: m}
+	return server{domain: "." + handleDomain + ".", queriedMain: m}
 }
 
 func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {
@@ -55,6 +64,14 @@ func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {
 
 	go func() {
 		mux := http.NewServeMux()
+		mux.HandleFunc("/", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write(indexHTML)
+		}))
+		mux.HandleFunc("/main.js", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/javascript")
+			w.Write(mainJS)
+		}))
 		mux.HandleFunc("/api/who-resolved", httpMethod(http.MethodGet, s.whoResolvedHandler))
 		err <- http.ListenAndServe(listenHTTPAddr, mux)
 	}()
