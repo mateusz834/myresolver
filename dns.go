@@ -121,15 +121,21 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 		resFlags.SetBit(dnsmsg.BitRD, true)
 	}
 
-	b := dnsmsg.StartBuilder[dnsmsg.ParserName](resBuf, hdr.ID, resFlags)
-	b.Question(q)
+	name := q.Name.AsRawName()
+
+	b := dnsmsg.StartBuilder(resBuf, hdr.ID, resFlags)
+	b.Question(dnsmsg.Question[dnsmsg.RawName]{
+		Name:  name,
+		Class: q.Class,
+		Type:  q.Type,
+	})
 	b.StartAnswers()
 
 	switch q.Type {
 	case dnsmsg.TypeA:
 		if addr.Is4() || addr.Is4In6() {
-			b.ResourceA(dnsmsg.ResourceHeader[dnsmsg.ParserName]{
-				Name:  q.Name,
+			b.ResourceA(dnsmsg.ResourceHeader[dnsmsg.RawName]{
+				Name:  name,
 				Type:  dnsmsg.TypeA,
 				Class: dnsmsg.ClassIN,
 				TTL:   60,
@@ -139,8 +145,8 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 		} else if addr.Is6() {
 			a6 := addr.As16()
 			for i := 0; i < 16; i += 4 {
-				b.ResourceA(dnsmsg.ResourceHeader[dnsmsg.ParserName]{
-					Name:  q.Name,
+				b.ResourceA(dnsmsg.ResourceHeader[dnsmsg.RawName]{
+					Name:  name,
 					Type:  dnsmsg.TypeA,
 					Class: dnsmsg.ClassIN,
 					TTL:   60,
@@ -151,8 +157,8 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 		}
 		callback(q, addr)
 	case dnsmsg.TypeAAAA:
-		b.ResourceAAAA(dnsmsg.ResourceHeader[dnsmsg.ParserName]{
-			Name:  q.Name,
+		b.ResourceAAAA(dnsmsg.ResourceHeader[dnsmsg.RawName]{
+			Name:  name,
 			Type:  dnsmsg.TypeAAAA,
 			Class: dnsmsg.ClassIN,
 			TTL:   60,
@@ -173,7 +179,7 @@ func reject(hdr dnsmsg.Header, resBuf []byte) []byte {
 	if hdr.Flags.Bit(dnsmsg.BitRD) {
 		resFlags.SetBit(dnsmsg.BitRD, true)
 	}
-	b := dnsmsg.StartBuilder[dnsmsg.ParserName](resBuf, hdr.ID, resFlags)
+	b := dnsmsg.StartBuilder(resBuf, hdr.ID, resFlags)
 	return b.Bytes()
 }
 
@@ -184,6 +190,6 @@ func malformed(hdr dnsmsg.Header, resBuf []byte) []byte {
 	if hdr.Flags.Bit(dnsmsg.BitRD) {
 		resFlags.SetBit(dnsmsg.BitRD, true)
 	}
-	b := dnsmsg.StartBuilder[dnsmsg.ParserName](resBuf, hdr.ID, resFlags)
+	b := dnsmsg.StartBuilder(resBuf, hdr.ID, resFlags)
 	return b.Bytes()
 }

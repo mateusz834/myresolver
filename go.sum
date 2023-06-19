@@ -1,2 +1,4 @@
 github.com/mateusz834/dnsmsg v0.0.0-20230614101750-570d6437c5e2 h1:Va7c7zEf78DXsfzmvz62aG127i85tHH6nf0EjWd/tSw=
 github.com/mateusz834/dnsmsg v0.0.0-20230614101750-570d6437c5e2/go.mod h1:1Dz5qxxMcq8oWLX4wpwjvZYIg62QnqtLwYzQEoY5LOo=
+github.com/mateusz834/dnsmsg v0.0.0-20230619075338-d31b6ffbf670 h1:geVc0cRZNqw3E5xrN6vE0qn5qBCSwwE1XO7f/IXUxYA=
+github.com/mateusz834/dnsmsg v0.0.0-20230619075338-d31b6ffbf670/go.mod h1:1Dz5qxxMcq8oWLX4wpwjvZYIg62QnqtLwYzQEoY5LOo=
