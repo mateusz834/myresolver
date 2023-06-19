@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"net/netip"
 	"strings"
@@ -16,10 +18,13 @@ import (
 
 var (
 	//go:embed static/index.html
-	indexHTML []byte
+	rawIndexHTML string
 
 	//go:embed static/main.js
 	mainJS []byte
+
+	//go:embed static/main.css
+	mainCSS []byte
 )
 
 type server struct {
@@ -27,14 +32,28 @@ type server struct {
 	queriedMain     map[string]netip.Addr
 	queriedFallback map[string]netip.Addr
 	domain          string
+	baseDomain      string
 }
 
 func NewServer(handleDomain string) server {
 	m := make(map[string]netip.Addr)
-	return server{domain: "rand.api.get" + handleDomain + ".", queriedMain: m}
+	return server{domain: "rand.api.get" + handleDomain + ".", baseDomain: handleDomain, queriedMain: m}
 }
 
 func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {
+	tmpl, err := template.New("").Parse(rawIndexHTML)
+	if err != nil {
+		return err
+	}
+
+	var b bytes.Buffer
+	if err := tmpl.Execute(&b, struct {
+		BaseDomain string
+	}{s.baseDomain}); err != nil {
+		return err
+	}
+	index := b.Bytes()
+
 	go func() {
 		for {
 			time.Sleep(time.Second * 25)
@@ -52,31 +71,36 @@ func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {
 		}
 	}()
 
-	err := make(chan error, 1)
+	errChan := make(chan error, 1)
 
 	go func() {
-		err <- myresolver.ListenUDPDNS(dnsAddr, s.handleQuery)
+		errChan <- myresolver.ListenUDPDNS(dnsAddr, s.handleQuery)
 	}()
 
 	go func() {
-		err <- myresolver.ListenTCPDNS(dnsAddr, s.handleQuery)
+		errChan <- myresolver.ListenTCPDNS(dnsAddr, s.handleQuery)
 	}()
 
 	go func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write(indexHTML)
+			w.Write(index)
 		}))
 		mux.HandleFunc("/main.js", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/javascript")
 			w.Write(mainJS)
 		}))
+		mux.HandleFunc("/main.css", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/css")
+			w.Write(mainCSS)
+		}))
 		mux.HandleFunc("/api/who-resolved", httpMethod(http.MethodGet, s.whoResolvedHandler))
-		err <- http.ListenAndServe(listenHTTPAddr, mux)
+
+		errChan <- http.ListenAndServe(listenHTTPAddr, mux)
 	}()
 
-	return <-err
+	return <-errChan
 }
 
 func (s *server) handleQuery(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr) {

@@ -4,11 +4,32 @@
 <head>
 	<title>Detect who resolved your DNS query</title>
 	<script type="module" src="/main.js"></script>
+	<link rel="stylesheet" href="/main.css">
+	<meta name="viewport" content="width=device-width" />
 </head>
 
 <body>
-	Resolved by:
-	<div id="addr-location">
+	<div class="container">
+		<h1>{{ .BaseDomain }}</h1>
+		<h2>Detect who resolver your DNS query on your behalf</h2>
+
+		<div id="detecting">
+			<p>DNS resolver IP address is currently beeing determined ....</p>
+		</div>
+
+		<div id="detected" class="hidden">
+			DNS query for <div id="query-domain"></div> was resolved by: <div id="addr-location"></div>
+
+			<div id="cli">
+				<h2>Detect your DNS resolver using CLI</h2>
+				<p>Just query the <span id="cli-domain">get.{{.BaseDomain}}</span> domain.</p>
+				<p>Example using dig:</p>
+				<pre>
+					$ dig get.{{.BaseDomain}} +short TXT
+					"Query resolved by: '1.1.1.1'"
+				</pre>
+			</div>
+		</div>
 	</div>
 </body>
 

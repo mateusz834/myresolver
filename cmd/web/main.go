@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net/netip"
@@ -19,6 +20,10 @@ func run() error {
 	dnsAddr := flag.String("dnsaddr", "[::]:53", "")
 	httpAddr := flag.String("httpaddr", "[::]:80", "")
 	flag.Parse()
+
+	if *baseDomain == "" {
+		return errors.New("basedomain flag is requierd")
+	}
 
 	dns, err := netip.ParseAddrPort(*dnsAddr)
 	if err != nil {

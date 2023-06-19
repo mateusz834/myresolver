@@ -1,0 +1,30 @@
+body {
+	box-sizing: border-box;
+	margin: 0;
+}
+
+.hidden {
+	display: none;
+}
+
+body {
+	word-wrap: break-word;
+}
+
+.container {
+	text-align: center;
+	line-height: 1.5;
+}
+
+#query-domain, #cli-domain {
+	font-weight: 600;
+}
+
+#addr-location {
+	font-weight: 600;
+	font-size: 1.25em;
+}
+
+#cli > pre {
+	white-space: pre-line;
+}

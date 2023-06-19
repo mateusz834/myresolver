@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const addrElement = document.getElementById("addr-location");
   const queryDomain = randomHex() + "." + "rand.api.get." + location.hostname
   setTimeout(async () => {
     try {
@@ -11,7 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/who-resolved?domain=" + encodeURIComponent(queryDomain) + ".");
       if (res.status == 200) {
         const json = await res.json();
-        addrElement.innerText = json.addr;
+        const addr = json.addr;
+
+        document.getElementById("addr-location").innerText = addr;
+        document.getElementById("query-domain").innerText = queryDomain;
+        document.getElementById("detecting").classList.add("hidden");
+        document.getElementById("detected").classList.remove("hidden");
         break;
       }
       await new Promise((resolve) => setTimeout(() => resolve(), 200 * i));
@@ -24,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
   * @returns {string}
   */
 function randomHex() {
-  return toHex(crypto.getRandomValues(new Uint8Array(30)));
+  return toHex(crypto.getRandomValues(new Uint8Array(20)));
 }
 
 
