@@ -131,9 +131,13 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 	})
 	b.StartAnswers()
 
+	if addr.Is4In6() {
+		addr = netip.AddrFrom4(addr.As4())
+	}
+
 	switch q.Type {
 	case dnsmsg.TypeA:
-		if addr.Is4() || addr.Is4In6() {
+		if addr.Is4() {
 			b.ResourceA(dnsmsg.ResourceHeader[dnsmsg.RawName]{
 				Name:  name,
 				Type:  dnsmsg.TypeA,
@@ -166,6 +170,20 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 			AAAA: addr.As16(),
 		})
 		callback(q, addr)
+	case dnsmsg.TypeTXT:
+		txt := make([]byte, 1, 128)
+		txt = append(txt, "Query resolved by: '"...)
+		txt = addr.AppendTo(txt)
+		txt = append(txt, '\'')
+		txt[0] = uint8(len(txt) - 1)
+		b.ResourceTXT(dnsmsg.ResourceHeader[dnsmsg.RawName]{
+			Name:  name,
+			Type:  dnsmsg.TypeTXT,
+			Class: dnsmsg.ClassIN,
+			TTL:   60,
+		}, dnsmsg.ResourceTXT{
+			TXT: txt,
+		})
 	default:
 	}
 
