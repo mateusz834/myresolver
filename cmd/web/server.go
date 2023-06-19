@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"net/http"
 	"net/netip"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,13 +30,17 @@ type server struct {
 	m               sync.Mutex
 	queriedMain     map[string]netip.Addr
 	queriedFallback map[string]netip.Addr
-	domain          string
+	dnsAPIDomain    dnsmsg.RawName
 	baseDomain      string
 }
 
 func NewServer(handleDomain string) server {
 	m := make(map[string]netip.Addr)
-	return server{domain: ".rand.api.get." + handleDomain + ".", baseDomain: handleDomain, queriedMain: m}
+	return server{
+		dnsAPIDomain: dnsmsg.MustNewRawName("rand.api.get." + handleDomain + "."),
+		baseDomain:   handleDomain,
+		queriedMain:  m,
+	}
 }
 
 func (s *server) Run(dnsAddrs []netip.AddrPort, listenHTTPAddr string) error {
@@ -107,13 +110,13 @@ func (s *server) Run(dnsAddrs []netip.AddrPort, listenHTTPAddr string) error {
 }
 
 func (s *server) handleQuery(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr) {
-	domain := q.Name.String()
-	// TODO: this is a naive approach, it does not take into account
-	// escape chatacters.
-	if strings.HasSuffix(domain, s.domain) {
-		s.m.Lock()
-		s.queriedMain[domain] = srcAddr
-		s.m.Unlock()
+	domain := q.Name.AsRawName()
+	for i := 0; domain[i] != 0 && len(domain[i:]) >= len(s.dnsAPIDomain); i += 1 + int(domain[i]) {
+		if bytes.Equal(domain[i:], s.dnsAPIDomain) {
+			s.m.Lock()
+			s.queriedMain[string(domain)] = srcAddr
+			s.m.Unlock()
+		}
 	}
 }
 
@@ -121,13 +124,18 @@ func (s *server) getLastQueriedAddrOfDomain(domain string) (netip.Addr, bool) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	val, ok := s.queriedMain[domain]
+	d, err := dnsmsg.NewRawName(domain)
+	if err != nil {
+		return netip.Addr{}, false
+	}
+
+	val, ok := s.queriedMain[string(d)]
 	if ok {
 		delete(s.queriedMain, domain)
 		return val, true
 	}
 	if s.queriedFallback != nil {
-		val, ok = s.queriedFallback[domain]
+		val, ok = s.queriedFallback[string(d)]
 	}
 	return val, ok
 }
