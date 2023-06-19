@@ -31,7 +31,7 @@ type server struct {
 
 func NewServer(handleDomain string) server {
 	m := make(map[string]netip.Addr)
-	return server{domain: "." + handleDomain + ".", queriedMain: m}
+	return server{domain: "rand.api.get" + handleDomain + ".", queriedMain: m}
 }
 
 func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {

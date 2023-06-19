@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 0);
   setTimeout(async () => {
     for (let i = 0; i < 10; i++) {
-      const res = await fetch("/api/who-resolved?domain=" + queryDomain + ".");
+      const res = await fetch("/api/who-resolved?domain=" + encodeURIComponent(queryDomain) + ".");
       if (res.status == 200) {
         const json = await res.json();
         addrElement.innerText = json.addr;

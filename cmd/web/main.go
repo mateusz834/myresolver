@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/netip"
 	"os"
@@ -14,6 +15,16 @@ func main() {
 }
 
 func run() error {
-	srv := NewServer("rand.api.get.my-resolver.834834.xyz")
-	return srv.Run(netip.MustParseAddrPort("95.216.184.1:53"), ":80")
+	baseDomain := flag.String("basedomain", "", "")
+	dnsAddr := flag.String("dnsaddr", "[::]:53", "")
+	httpAddr := flag.String("httpaddr", "[::]:80", "")
+	flag.Parse()
+
+	dns, err := netip.ParseAddrPort(*dnsAddr)
+	if err != nil {
+		return err
+	}
+
+	srv := NewServer(*baseDomain)
+	return srv.Run(dns, *httpAddr)
 }
