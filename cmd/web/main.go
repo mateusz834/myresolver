@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/netip"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -25,11 +26,15 @@ func run() error {
 		return errors.New("basedomain flag is requierd")
 	}
 
-	dns, err := netip.ParseAddrPort(*dnsAddr)
-	if err != nil {
-		return err
+	dnsAddrs := make([]netip.AddrPort, 0)
+	for _, dnsAddr := range strings.Split(*dnsAddr, ",") {
+		addr, err := netip.ParseAddrPort(dnsAddr)
+		if err != nil {
+			return err
+		}
+		dnsAddrs = append(dnsAddrs, addr)
 	}
 
 	srv := NewServer(*baseDomain)
-	return srv.Run(dns, *httpAddr)
+	return srv.Run(dnsAddrs, *httpAddr)
 }

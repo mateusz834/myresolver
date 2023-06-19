@@ -40,7 +40,7 @@ func NewServer(handleDomain string) server {
 	return server{domain: ".rand.api.get." + handleDomain + ".", baseDomain: handleDomain, queriedMain: m}
 }
 
-func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {
+func (s *server) Run(dnsAddrs []netip.AddrPort, listenHTTPAddr string) error {
 	tmpl, err := template.New("").Parse(rawIndexHTML)
 	if err != nil {
 		return err
@@ -73,13 +73,16 @@ func (s *server) Run(dnsAddr netip.AddrPort, listenHTTPAddr string) error {
 
 	errChan := make(chan error, 1)
 
-	go func() {
-		errChan <- myresolver.ListenUDPDNS(dnsAddr, s.handleQuery)
-	}()
+	for _, dnsAddr := range dnsAddrs {
+		dnsAddr := dnsAddr
+		go func() {
+			errChan <- myresolver.ListenUDPDNS(dnsAddr, s.handleQuery)
+		}()
 
-	go func() {
-		errChan <- myresolver.ListenTCPDNS(dnsAddr, s.handleQuery)
-	}()
+		go func() {
+			errChan <- myresolver.ListenTCPDNS(dnsAddr, s.handleQuery)
+		}()
+	}
 
 	go func() {
 		mux := http.NewServeMux()
