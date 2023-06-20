@@ -2,9 +2,9 @@
 Detect who resolved your DNS query.
 
 ## Try it out
-Just query the `get.my-resolver.834834.xyz` domain.
 
 ### CLI interface
+Just query the `get.my-resolver.834834.xyz` domain.
 
 ```bash
 $ dig get.my-resolver.834834.xyz +short TXT
