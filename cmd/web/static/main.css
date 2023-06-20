@@ -29,3 +29,8 @@ body {
 #cli > pre {
 	white-space: pre-line;
 }
+
+#maxmind-notice {
+	margin-top: 2em;
+	font-size: 0.75em;
+}

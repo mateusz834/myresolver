@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const v = `ASN ${asn}: '${desc}'`;
           document.getElementById("cli-example").innerText += `\n"Query resolved by: '${addr}'"\n"${v}"`;
           document.getElementById("asn-details").innerText = v;
+          document.getElementById("maxmind-notice").classList.remove("hidden");
         } else {
           document.getElementById("cli-example").innerText += `\n"Query resolved by: '${addr}'"`;
         }
