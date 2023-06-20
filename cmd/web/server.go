@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/netip"
@@ -89,18 +90,18 @@ func (s *server) Run(dnsAddrs []netip.AddrPort, listenHTTPAddr string) error {
 
 	go func() {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+		mux.HandleFunc("/", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write(index)
-		}))
-		mux.HandleFunc("/main.js", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+		})))
+		mux.HandleFunc("/main.js", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/javascript")
 			w.Write(mainJS)
-		}))
-		mux.HandleFunc("/main.css", httpMethod(http.MethodGet, func(w http.ResponseWriter, _ *http.Request) {
+		})))
+		mux.HandleFunc("/main.css", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/css")
 			w.Write(mainCSS)
-		}))
+		})))
 		mux.HandleFunc("/api/who-resolved", httpMethod(http.MethodGet, s.whoResolvedHandler))
 
 		errChan <- http.ListenAndServe(listenHTTPAddr, mux)
@@ -168,6 +169,14 @@ func httpMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
 			w.Header().Add("Allow", method)
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
+		handler(w, r)
+	})
+}
+
+func cacheMiddleware(duration time.Duration, handler http.HandlerFunc) http.HandlerFunc {
+	val := fmt.Sprintf("max-age=%v", int(duration.Seconds()))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", val)
 		handler(w, r)
 	})
 }
