@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("query-domain").innerText = queryDomain;
         document.getElementById("detecting").classList.add("hidden");
         document.getElementById("detected").classList.remove("hidden");
+        document.getElementById("cli-example").innerText += `\n"Query resolved by: '${addr}'`
         break;
       }
       await new Promise((resolve) => setTimeout(() => resolve(), 200 * i));
