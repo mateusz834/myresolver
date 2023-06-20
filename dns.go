@@ -172,11 +172,10 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, db *IPDB, callba
 		})
 		callback(q, addr)
 	case dnsmsg.TypeTXT:
-		txt := make([]byte, 1, 128)
+		txt := make([]byte, 0, 128)
 		txt = append(txt, "Query resolved by: '"...)
 		txt = addr.AppendTo(txt)
 		txt = append(txt, '\'')
-		txt[0] = uint8(len(txt) - 1)
 
 		b.ResourceTXT(dnsmsg.ResourceHeader[dnsmsg.RawName]{
 			Name:  name,
@@ -184,18 +183,17 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, db *IPDB, callba
 			Class: dnsmsg.ClassIN,
 			TTL:   60,
 		}, dnsmsg.ResourceTXT{
-			TXT: txt,
+			TXT: [][]byte{txt},
 		})
 
 		if db != nil {
 			asn, desc, err := db.LookupIP(addr)
 			if err == nil && asn != 0 && desc != "" {
-				txt = append(txt[:1], "ASN "...)
+				txt = append(txt[:0], "ASN "...)
 				txt = strconv.AppendUint(txt, asn, 10)
 				txt = append(txt, ": '"...)
 				txt = append(txt, desc...)
 				txt = append(txt, '\'')
-				txt[0] = uint8(len(txt) - 1)
 
 				b.ResourceTXT(dnsmsg.ResourceHeader[dnsmsg.RawName]{
 					Name:  name,
@@ -203,7 +201,7 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, db *IPDB, callba
 					Class: dnsmsg.ClassIN,
 					TTL:   60,
 				}, dnsmsg.ResourceTXT{
-					TXT: txt,
+					TXT: [][]byte{txt},
 				})
 			}
 		}

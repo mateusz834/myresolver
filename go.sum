@@ -1,6 +1,6 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
-github.com/mateusz834/dnsmsg v0.0.0-20230619100930-6428be214a41 h1:MndSCLtPCn9w2ptTtDNkU7qXDcxat/yUkMuGodUpJlY=
-github.com/mateusz834/dnsmsg v0.0.0-20230619100930-6428be214a41/go.mod h1:1Dz5qxxMcq8oWLX4wpwjvZYIg62QnqtLwYzQEoY5LOo=
+github.com/mateusz834/dnsmsg v0.0.0-20230620153244-dfc374162a62 h1:Mf6jcWc8XV+k7i4c171OynvT+bKznoovqfKFa9B2Gyw=
+github.com/mateusz834/dnsmsg v0.0.0-20230620153244-dfc374162a62/go.mod h1:1Dz5qxxMcq8oWLX4wpwjvZYIg62QnqtLwYzQEoY5LOo=
 github.com/oschwald/maxminddb-golang v1.11.0 h1:aSXMqYR/EPNjGE8epgqwDay+P30hCBZIveY0WZbAWh0=
 github.com/oschwald/maxminddb-golang v1.11.0/go.mod h1:YmVI+H0zh3ySFR3w+oz8PCfglAFj3PuCmui13+P9zDg=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
