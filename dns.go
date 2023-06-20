@@ -5,12 +5,13 @@ import (
 	"io"
 	"net"
 	"net/netip"
+	"strconv"
 	"time"
 
 	"github.com/mateusz834/dnsmsg"
 )
 
-func ListenUDPDNS(srcAddr netip.AddrPort, callback func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr)) error {
+func ListenUDPDNS(srcAddr netip.AddrPort, db *IPDB, callback func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr)) error {
 	udpConn, err := net.ListenUDP("udp", net.UDPAddrFromAddrPort(srcAddr))
 	if err != nil {
 		return err
@@ -25,7 +26,7 @@ func ListenUDPDNS(srcAddr netip.AddrPort, callback func(q dnsmsg.Question[dnsmsg
 			return err
 		}
 
-		response := handleResponse(addr.Addr(), buf[:n], resBuf[:0], callback)
+		response := handleResponse(addr.Addr(), buf[:n], resBuf[:0], db, callback)
 		if response != nil {
 			if _, err := udpConn.WriteToUDPAddrPort(response, addr); err != nil {
 				return err
@@ -34,7 +35,7 @@ func ListenUDPDNS(srcAddr netip.AddrPort, callback func(q dnsmsg.Question[dnsmsg
 	}
 }
 
-func ListenTCPDNS(srcAddr netip.AddrPort, callback func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr)) error {
+func ListenTCPDNS(srcAddr netip.AddrPort, db *IPDB, callback func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr)) error {
 	tcpConn, err := net.ListenTCP("tcp", net.TCPAddrFromAddrPort(srcAddr))
 	if err != nil {
 		return err
@@ -73,7 +74,7 @@ func ListenTCPDNS(srcAddr netip.AddrPort, callback func(q dnsmsg.Question[dnsmsg
 				}
 
 				addr, _ := netip.AddrFromSlice(conn.LocalAddr().(*net.TCPAddr).IP)
-				if msg := handleResponse(addr, buf[:length], resBuf, callback); msg != nil {
+				if msg := handleResponse(addr, buf[:length], resBuf, db, callback); msg != nil {
 					m := append(binary.BigEndian.AppendUint16(nil, uint16(len(msg))), msg...)
 					if _, err := conn.Write(m); err != nil {
 						return
@@ -87,7 +88,7 @@ func ListenTCPDNS(srcAddr netip.AddrPort, callback func(q dnsmsg.Question[dnsmsg
 
 }
 
-func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr)) []byte {
+func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, db *IPDB, callback func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr)) []byte {
 	if callback == nil {
 		callback = func(q dnsmsg.Question[dnsmsg.ParserName], srcAddr netip.Addr) {}
 	}
@@ -176,6 +177,7 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 		txt = addr.AppendTo(txt)
 		txt = append(txt, '\'')
 		txt[0] = uint8(len(txt) - 1)
+
 		b.ResourceTXT(dnsmsg.ResourceHeader[dnsmsg.RawName]{
 			Name:  name,
 			Type:  dnsmsg.TypeTXT,
@@ -184,6 +186,28 @@ func handleResponse(addr netip.Addr, msg []byte, resBuf []byte, callback func(q 
 		}, dnsmsg.ResourceTXT{
 			TXT: txt,
 		})
+
+		if db != nil {
+			asn, desc, err := db.LookupIP(addr)
+			if err == nil && asn != 0 && desc != "" {
+				txt = append(txt[:1], "ASN "...)
+				txt = strconv.AppendUint(txt, asn, 10)
+				txt = append(txt, ": '"...)
+				txt = append(txt, desc...)
+				txt = append(txt, '\'')
+				txt[0] = uint8(len(txt) - 1)
+
+				b.ResourceTXT(dnsmsg.ResourceHeader[dnsmsg.RawName]{
+					Name:  name,
+					Type:  dnsmsg.TypeTXT,
+					Class: dnsmsg.ClassIN,
+					TTL:   60,
+				}, dnsmsg.ResourceTXT{
+					TXT: txt,
+				})
+			}
+		}
+
 	default:
 	}
 

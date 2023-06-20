@@ -11,12 +11,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.status == 200) {
         const json = await res.json();
         const addr = json.addr;
+        const asn = json.asn;
+        const desc = json.desc;
 
         document.getElementById("addr-location").innerText = addr;
         document.getElementById("query-domain").innerText = queryDomain;
+        if (asn && desc) {
+          const v = `ASN ${asn}: '${desc}'`;
+          document.getElementById("cli-example").innerText += `\n"Query resolved by: '${addr}'"\n"${v}"`;
+          document.getElementById("asn-details").innerText = v;
+        } else {
+          document.getElementById("cli-example").innerText += `\n"Query resolved by: '${addr}'"`;
+        }
         document.getElementById("detecting").classList.add("hidden");
         document.getElementById("detected").classList.remove("hidden");
-        document.getElementById("cli-example").innerText += `\n"Query resolved by: '${addr}'`
         break;
       }
       await new Promise((resolve) => setTimeout(() => resolve(), 200 * i));

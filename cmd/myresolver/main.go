@@ -18,7 +18,18 @@ func main() {
 
 func run() error {
 	addrStr := flag.String("addr", "[::]:53", "")
+	adndb := flag.String("asndb", "", "")
 	flag.Parse()
+
+	var ipdb *myresolver.IPDB
+
+	if *adndb != "" {
+		db, err := myresolver.ParseIPDBFromFile(*adndb)
+		if err != nil {
+			return fmt.Errorf("failed while oppening the mmdb file: %v", err)
+		}
+		ipdb = &db
+	}
 
 	addr, err := netip.ParseAddrPort(*addrStr)
 	if err != nil {
@@ -28,11 +39,11 @@ func run() error {
 	errChan := make(chan error, 1)
 
 	go func() {
-		errChan <- myresolver.ListenUDPDNS(addr, nil)
+		errChan <- myresolver.ListenUDPDNS(addr, ipdb, nil)
 	}()
 
 	go func() {
-		errChan <- myresolver.ListenTCPDNS(addr, nil)
+		errChan <- myresolver.ListenTCPDNS(addr, ipdb, nil)
 	}()
 
 	return <-errChan

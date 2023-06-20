@@ -33,14 +33,16 @@ type server struct {
 	queriedFallback map[string]netip.Addr
 	dnsAPIDomain    dnsmsg.RawName
 	baseDomain      string
+	ipdb            *myresolver.IPDB
 }
 
-func NewServer(handleDomain string) server {
+func NewServer(ipdb *myresolver.IPDB, handleDomain string) server {
 	m := make(map[string]netip.Addr)
 	return server{
 		dnsAPIDomain: dnsmsg.MustNewRawName("rand.api.get." + handleDomain + "."),
 		baseDomain:   handleDomain,
 		queriedMain:  m,
+		ipdb:         ipdb,
 	}
 }
 
@@ -80,11 +82,11 @@ func (s *server) Run(dnsAddrs []netip.AddrPort, listenHTTPAddr string) error {
 	for _, dnsAddr := range dnsAddrs {
 		dnsAddr := dnsAddr
 		go func() {
-			errChan <- myresolver.ListenUDPDNS(dnsAddr, s.handleQuery)
+			errChan <- myresolver.ListenUDPDNS(dnsAddr, s.ipdb, s.handleQuery)
 		}()
 
 		go func() {
-			errChan <- myresolver.ListenTCPDNS(dnsAddr, s.handleQuery)
+			errChan <- myresolver.ListenTCPDNS(dnsAddr, s.ipdb, s.handleQuery)
 		}()
 	}
 
@@ -158,9 +160,20 @@ func (s *server) whoResolvedHandler(rw http.ResponseWriter, r *http.Request) {
 		addr = netip.AddrFrom4(addr.As4())
 	}
 
+	asn, desc := uint64(0), ""
+	if s.ipdb != nil {
+		asn, desc, _ = s.ipdb.LookupIP(addr)
+	}
+
 	json.NewEncoder(rw).Encode(struct {
 		Addr string `json:"addr"`
-	}{Addr: addr.String()})
+		ASN  uint64 `json:"asn,omitempty"`
+		Desc string `json:"desc,omitempty"`
+	}{
+		Addr: addr.String(),
+		ASN:  asn,
+		Desc: desc,
+	})
 }
 
 func httpMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
