@@ -23,6 +23,7 @@ func run() error {
 	dnsAddr := flag.String("dnsaddr", "[::]:53", "")
 	httpAddr := flag.String("httpaddr", "[::]:80", "")
 	adndb := flag.String("asndb", "", "")
+	devMode := flag.Bool("dev", false, "")
 	flag.Parse()
 
 	var ipdb *myresolver.IPDB
@@ -48,6 +49,6 @@ func run() error {
 		dnsAddrs = append(dnsAddrs, addr)
 	}
 
-	srv := NewServer(ipdb, *baseDomain)
+	srv := NewServer(ipdb, *baseDomain, *devMode)
 	return srv.Run(dnsAddrs, *httpAddr)
 }

@@ -34,15 +34,17 @@ type server struct {
 	dnsAPIDomain    dnsmsg.RawName
 	baseDomain      string
 	ipdb            *myresolver.IPDB
+	devMode         bool
 }
 
-func NewServer(ipdb *myresolver.IPDB, handleDomain string) server {
+func NewServer(ipdb *myresolver.IPDB, handleDomain string, devMode bool) server {
 	m := make(map[string]netip.Addr)
 	return server{
 		dnsAPIDomain: dnsmsg.MustNewRawName("rand.api.get." + handleDomain + "."),
 		baseDomain:   handleDomain,
 		queriedMain:  m,
 		ipdb:         ipdb,
+		devMode:      devMode,
 	}
 }
 
@@ -92,15 +94,15 @@ func (s *server) Run(dnsAddrs []netip.AddrPort, listenHTTPAddr string) error {
 
 	go func() {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, func(w http.ResponseWriter, _ *http.Request) {
+		mux.HandleFunc("/", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, !s.devMode, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write(index)
 		})))
-		mux.HandleFunc("/main.js", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, func(w http.ResponseWriter, _ *http.Request) {
+		mux.HandleFunc("/main.js", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, !s.devMode, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/javascript")
 			w.Write(mainJS)
 		})))
-		mux.HandleFunc("/main.css", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, func(w http.ResponseWriter, _ *http.Request) {
+		mux.HandleFunc("/main.css", httpMethod(http.MethodGet, cacheMiddleware(time.Hour, !s.devMode, func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/css")
 			w.Write(mainCSS)
 		})))
@@ -144,6 +146,19 @@ func (s *server) getLastQueriedAddrOfDomain(domain string) (netip.Addr, bool) {
 }
 
 func (s *server) whoResolvedHandler(rw http.ResponseWriter, r *http.Request) {
+	if s.devMode {
+		json.NewEncoder(rw).Encode(struct {
+			Addr string `json:"addr"`
+			ASN  uint64 `json:"asn,omitempty"`
+			Desc string `json:"desc,omitempty"`
+		}{
+			Addr: "192.0.2.1",
+			ASN:  64500,
+			Desc: "devel ASN",
+		})
+		return
+	}
+
 	domain := r.URL.Query().Get("domain")
 	if domain == "" {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -186,10 +201,12 @@ func httpMethod(method string, handler http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-func cacheMiddleware(duration time.Duration, handler http.HandlerFunc) http.HandlerFunc {
+func cacheMiddleware(duration time.Duration, cache bool, handler http.HandlerFunc) http.HandlerFunc {
 	val := fmt.Sprintf("max-age=%v", int(duration.Seconds()))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Cache-Control", val)
+		if cache {
+			w.Header().Add("Cache-Control", val)
+		}
 		handler(w, r)
 	})
 }
